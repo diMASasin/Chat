@@ -113,64 +113,80 @@ int main(void)
 		cout << "Listening..." << endl;
 	}
 
-	//Client socket creation and acception in case of connection
-	sockaddr_in clientInfo;
-	ZeroMemory(&clientInfo, sizeof(clientInfo));	// Initializing clientInfo structure
+	
+	const int clientsCount = 3;
+	SOCKET ClientConn[clientsCount];
+	sockaddr_in clientInfo[clientsCount];
 
-	int clientInfo_size = sizeof(clientInfo);
-
-	SOCKET ClientConn;
-
-
-	ClientConn = accept(ServSock, (sockaddr*)&clientInfo, &clientInfo_size);
-
-	if (ClientConn == INVALID_SOCKET) 
+	for (int i = 0; i < clientsCount; i++)
 	{
-		cout << "Client detected, but can't connect to a client. Error # " << WSAGetLastError() << endl;
-		closesocket(ServSock);
-		closesocket(ClientConn);
-		WSACleanup();
-		return 1;
-	}
-	else 
-	{
-		cout << "Connection to a client established successfully" << endl;
-		cout << "Client connected with IP address " << IPToString(clientInfo.sin_addr.s_addr) << endl;
-	}
-
-	//Exchange text data between Server and Client. Disconnection if a client send "xxx"
-
-	vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE);							// Creation of buffers for sending and receiving data
-	short packet_size = 0;												// The size of sending / receiving packet in bytes
-
-	while (true) {
-		packet_size = recv(ClientConn, servBuff.data(), servBuff.size(), 0);					// Receiving packet from client. Program is waiting (system pause) until receive
-		cout << "Client's message: " << servBuff.data() << endl;
-
-		cout << "Your (host) message: ";
-		fgets(clientBuff.data(), clientBuff.size(), stdin);
-
-		// Check whether server would like to stop chatting 
-		if (clientBuff[0] == 'x' && clientBuff[1] == 'x' && clientBuff[2] == 'x') {
-			shutdown(ClientConn, SD_BOTH);
+		//Client socket creation and acception in case of connection
+		int clientInfo_size = sizeof(clientInfo[i]);
+		ZeroMemory(&(clientInfo[i]), sizeof(clientInfo_size));	// Initializing clientInfo structure
+		
+		ClientConn[i] = accept(ServSock, (sockaddr*)&(clientInfo[i]), &clientInfo_size);
+		if (ClientConn[i] == INVALID_SOCKET)
+		{
+			cout << "Client detected, but can't connect to a client. Error # " << WSAGetLastError() << endl;
 			closesocket(ServSock);
-			closesocket(ClientConn);
-			WSACleanup();
-			return 0;
-		}
-
-		packet_size = send(ClientConn, clientBuff.data(), clientBuff.size(), 0);
-
-		if (packet_size == SOCKET_ERROR) {
-			cout << "Can't send message to Client. Error # " << WSAGetLastError() << endl;
-			closesocket(ServSock);
-			closesocket(ClientConn);
+			closesocket(ClientConn[i]);
 			WSACleanup();
 			return 1;
 		}
+		else
+		{
+			cout << "Connection to a client established successfully" << endl;
+			cout << "Client connected with IP address " << IPToString(clientInfo[i].sin_addr.s_addr) << endl << endl;
+		}
+	}
+
+	//Exchange text data between Server and Client. Disconnection if a client send "xxx"
+	vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE);							// Creation of buffers for sending and receiving data
+	short packet_size = 0;												// The size of sending / receiving packet in bytes
+
+	//servBuff = { '/', 't', 'u', 'r', 'n' };
+	//servBuff.insert(servBuff.begin(), '/');
+	//servBuff.insert(servBuff.begin()+1, 't');
+	//servBuff.insert(servBuff.begin()+2, 'u');
+	//servBuff.insert(servBuff.begin()+3, 'r');
+	//servBuff.insert(servBuff.begin()+4, 'n');
+	send(ClientConn[0], "/turn", sizeof("/turn"), 0);
+	while (true) 
+	{
+		for (int i = 0; i < clientsCount; i++)
+		{
+			packet_size = recv(ClientConn[i], servBuff.data(), servBuff.size(), 0);					// Receiving packet from client. Program is waiting (system pause) until receive
+			cout << "Client's message: " << servBuff.data();
+
+			//cout << "Your (host) message: ";
+			//fgets(clientBuff.data(), clientBuff.size(), stdin);
+
+			// Check whether server would like to stop chatting 
+			if (servBuff[0] == 'x' && servBuff[1] == 'x' && servBuff[2] == 'x') {
+				shutdown(ClientConn[i], SD_BOTH);
+				closesocket(ServSock);
+				closesocket(ClientConn[i]);
+				WSACleanup();
+				return 0;
+			}
+
+			for (int j = 0; j < clientsCount; j++)
+				if(j != i)
+					packet_size = send(ClientConn[j], servBuff.data(), servBuff.size(), 0);
+
+			if (packet_size == SOCKET_ERROR) {
+				cout << "Can't send message to Client. Error # " << WSAGetLastError() << endl;
+				closesocket(ServSock);
+				closesocket(ClientConn[i]);
+				WSACleanup();
+				return 1;
+			}
+		}
 	}
 	closesocket(ServSock);
-	closesocket(ClientConn);
+	for (int i = 0; i < clientsCount; i++)
+		closesocket(ClientConn[i]);
+
 	WSACleanup();
 
 	return 0;
