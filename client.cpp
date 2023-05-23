@@ -87,7 +87,7 @@ int main(void)
 			WSACleanup();
 			return 0;
 		}
-
+		
 		packet_size = recv(ClientSock, servBuff.data(), servBuff.size(), 0);
 
 		if (packet_size == SOCKET_ERROR)
@@ -99,11 +99,13 @@ int main(void)
 		}
 
 		if(!(servBuff[0] == '/' && servBuff[1] == 't' && servBuff[2] == 'u' && servBuff[3] == 'r' && servBuff[4] == 'n'))
-			cout << "Server message: " << servBuff.data();
+		{
+			cout << "User: " << servBuff.data();
+			continue;
+		}
 		
-		cout << "Your (Client) message to Server: ";
+		cout << "You: ";
 		fgets(clientBuff.data(), clientBuff.size(), stdin);
-		
 		packet_size = send(ClientSock, clientBuff.data(), clientBuff.size(), 0);
 
 		if (packet_size == SOCKET_ERROR)

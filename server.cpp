@@ -47,7 +47,7 @@ int main(void)
 
 	// WinSock initialization
 	WSADATA wsData;
-
+	
 	erStat = WSAStartup(MAKEWORD(2, 2), &wsData);
 
 	if (erStat != 0) 
@@ -114,7 +114,11 @@ int main(void)
 	}
 
 	
-	const int clientsCount = 3;
+	int clientsCount;
+	cout << "Enter clients number: ";
+	cin >> clientsCount;
+	cout << "Waiting to connect " << clientsCount << " clients..." << endl;
+	
 	SOCKET ClientConn[clientsCount];
 	sockaddr_in clientInfo[clientsCount];
 
@@ -139,17 +143,13 @@ int main(void)
 			cout << "Client connected with IP address " << IPToString(clientInfo[i].sin_addr.s_addr) << endl << endl;
 		}
 	}
+	
+	cout << "Connection successful. Clients can chat." << endl;
 
 	//Exchange text data between Server and Client. Disconnection if a client send "xxx"
 	vector <char> servBuff(BUFF_SIZE), clientBuff(BUFF_SIZE);							// Creation of buffers for sending and receiving data
 	short packet_size = 0;												// The size of sending / receiving packet in bytes
 
-	//servBuff = { '/', 't', 'u', 'r', 'n' };
-	//servBuff.insert(servBuff.begin(), '/');
-	//servBuff.insert(servBuff.begin()+1, 't');
-	//servBuff.insert(servBuff.begin()+2, 'u');
-	//servBuff.insert(servBuff.begin()+3, 'r');
-	//servBuff.insert(servBuff.begin()+4, 'n');
 	send(ClientConn[0], "/turn", sizeof("/turn"), 0);
 	while (true) 
 	{
@@ -169,11 +169,17 @@ int main(void)
 				WSACleanup();
 				return 0;
 			}
+			
+			if((servBuff[0] == '/' && servBuff[1] == 't' && servBuff[2] == 'u' && servBuff[3] == 'r' && servBuff[4] == 'n'))
+				continue;
 
 			for (int j = 0; j < clientsCount; j++)
 				if(j != i)
 					packet_size = send(ClientConn[j], servBuff.data(), servBuff.size(), 0);
 
+			int nextClientIndex = i + 1 >= clientsCount ? 0 : i + 1;
+			send(ClientConn[nextClientIndex], "/turn", sizeof("/turn"), 0);
+			
 			if (packet_size == SOCKET_ERROR) {
 				cout << "Can't send message to Client. Error # " << WSAGetLastError() << endl;
 				closesocket(ServSock);
